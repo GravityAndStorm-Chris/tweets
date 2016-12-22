@@ -33,7 +33,7 @@ class TwitterBlock extends BlockBase {
       '#type' => 'textfield',
       '#title' => $this->t('Twitter username'),
       '#description' => $this->t(''),
-      '#default_value' => isset($this->configuration['tweets_username']) ? $this->configuration['tweets_username'] : 'tabvn',
+      '#default_value' => isset($this->configuration['tweets_username']) ? $this->configuration['tweets_username'] : 'tabvn, tabvn',
     );
     $form['tweets_limit'] = array(
       '#type' => 'textfield',
@@ -85,7 +85,29 @@ class TwitterBlock extends BlockBase {
    */
   public function build() {
     $build = [];
+    $tweets = [];
 
+    $usernames = preg_split('/[\s,]+/',$this->configuration['tweets_username']);
+    foreach($usernames as $username) {
+      $tweets = array_merge($tweets, $this->getTweets($username));
+    }
+
+    usort($tweets, array($this, 'cmp_tweets'));
+    $tweets = array_slice($tweets, 0, $this->configuration['tweets_limit']);
+
+    if ($tweets != []) {
+      $build = array(
+        '#theme' => 'tweets',
+        '#tweets' => $tweets,
+        '#cache' => array(
+          'max-age' => 3600, // seconds
+        ),
+      );
+    }
+    return $build;
+  }
+
+  private function getTweets($username) {
     $settings = array(
       'oauth_access_token' => $this->configuration['access_token'],
       'oauth_access_token_secret' => $this->configuration['token_secret'],
@@ -93,7 +115,7 @@ class TwitterBlock extends BlockBase {
       'consumer_secret' => $this->configuration['consumer_secret']
     );
     $url = 'https://api.twitter.com/1.1/statuses/user_timeline.json';
-    $getfield = '?screen_name=' . $this->configuration['tweets_username'] . '&count=' . $this->configuration['tweets_limit'];
+    $getfield = '?screen_name=' . $username . '&count=' . $this->configuration['tweets_limit'];
     $requestMethod = 'GET';
 
     $twitter = new TwitterAPIExchange($settings);
@@ -104,15 +126,14 @@ class TwitterBlock extends BlockBase {
 
     if ($response) {
       $tweets = json_decode($response);
-      $build = array(
-        '#theme' => 'tweets',
-        '#tweets' => $tweets,
-        '#cache' => array(
-          'max-age' => 3600, // seconds
-        ),
-      );
+      return $tweets;
     }
-    return $build;
+    return [];
+  }
+
+  private static function cmp_tweets($a,$b) {
+    $res = strtotime($b->created_at) - strtotime($a->created_at);
+    return $res;
   }
 
 }
