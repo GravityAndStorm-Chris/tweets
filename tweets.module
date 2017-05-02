@@ -43,6 +43,10 @@ function template_preprocess_tweets(&$variables) {
         'time' => $tweet->created_at,
         'time_ago' => \Drupal::service('date.formatter')
           ->formatInterval(REQUEST_TIME - strtotime($tweet->created_at)),
+        'date' =>  \Drupal::service('date.formatter')
+          ->format(strtotime($tweet->created_at), 'custom', 'd.m.y - h:m'),
+        'date_us' =>  \Drupal::service('date.formatter')
+          ->format(strtotime($tweet->created_at), 'custom', 'm/d/y - h:m'),
         'username' => $tweet->user->screen_name,
         'screen_name' => $tweet->user->screen_name,
         'user_url' => $user_url,
